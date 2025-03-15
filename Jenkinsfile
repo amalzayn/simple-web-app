@@ -5,7 +5,7 @@ pipeline {
         REGION = "us-central1 (lowa)"
         CLUSTER_NAME = "my-cluster"
         REPO_NAME = "my-docker-repo"
-        IMAGE_NAME = "my-app"
+        IMAGE_NAME = "node"
         IMAGE_TAG = "${BUILD_NUMBER}"
         AR_REPO = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}"
         GCLOUD_PATH = "/opt/homebrew/bin/gcloud"

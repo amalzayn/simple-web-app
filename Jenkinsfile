@@ -2,7 +2,7 @@ pipeline {
     agent any
     environment {
         PROJECT_ID = "symbolic-math-446906-f2"
-        REGION = "us-central1 (lowa)"
+        REGION = "us-central1"
         CLUSTER_NAME = "my-cluster"
         REPO_NAME = "my-docker-repo"
         IMAGE_NAME = "node"

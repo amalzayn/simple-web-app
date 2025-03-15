@@ -1,0 +1,84 @@
+pipeline {
+    agent {
+        kubernetes {
+            yaml """
+            apiVersion: v1
+            kind: Pod
+            spec:
+              containers:
+              - name: kubectl
+                image: google/cloud-sdk:latest
+                command:
+                - cat
+                tty: true
+            """
+        }
+    }
+    
+    parameters {
+        string(name: 'IMAGE_TAG', defaultValue: 'latest', description: 'The image tag to deploy')
+    }
+    
+    environment {
+        DOCKER_REGISTRY = "gcr.io/your-project-id"
+        IMAGE_NAME = "demo-app"
+        CLUSTER_NAME = "your-gke-cluster"
+        CLUSTER_ZONE = "us-central1-a"
+        PROJECT_ID = "your-project-id"
+    }
+    
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+        
+        stage('Deploy to GKE') {
+            steps {
+                container('kubectl') {
+                    withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                        sh "gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}"
+                        sh "gcloud container clusters get-credentials ${CLUSTER_NAME} --zone ${CLUSTER_ZONE} --project ${PROJECT_ID}"
+                        
+                        // Update the deployment file with the correct image tag
+                        sh "sed -i 's|\\\${DOCKER_REGISTRY}|${DOCKER_REGISTRY}|g' kubernetes-deployment.yaml"
+                        sh "sed -i 's|\\\${IMAGE_TAG}|${params.IMAGE_TAG}|g' kubernetes-deployment.yaml"
+                        
+                        // Apply the Kubernetes manifests
+                        sh "kubectl apply -f kubernetes-deployment.yaml"
+                    }
+                }
+            }
+        }
+        
+        stage('Verify Deployment') {
+            steps {
+                container('kubectl') {
+                    // Wait for the deployment to be available
+                    sh "kubectl rollout status deployment/demo-app --timeout=180s"
+                    
+                    // Get the service IP to report in the console
+                    script {
+                        def serviceIP = sh(
+                            script: "kubectl get service demo-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}'",
+                            returnStdout: true
+                        ).trim()
+                        
+                        echo "Application deployed successfully!"
+                        echo "Access your application at: http://${serviceIP}/"
+                    }
+                }
+            }
+        }
+    }
+    
+    post {
+        success {
+            echo "Deployment completed successfully!"
+        }
+        failure {
+            echo "Deployment failed!"
+        }
+    }
+}

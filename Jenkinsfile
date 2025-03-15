@@ -9,7 +9,7 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
         AR_REPO = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}"
         GCLOUD_PATH = "/opt/homebrew/bin/gcloud"
-        DOCKER_PATH = "/opt/homebrew/bin/docker"  // Update this if your docker path is different
+        DOCKER_PATH = "/usr/local/bin/docker"  // Update this if your docker path is different
         KUBECTL_PATH = "/opt/homebrew/bin/kubectl"  // Update this if your kubectl path is different
     }
     stages {

@@ -16,11 +16,11 @@ pipeline {
             }
         }
         stage('Authenticate with GCP') {
-            steps {
-                script {
-                    sh 'gcloud auth activate-service-account --key-file=/var/jenkins_home/gcp-key.json'
-                    sh 'gcloud config set project $PROJECT_ID'
-                    sh 'gcloud config set compute/region $REGION'
+    steps {
+        script {
+            sh 'gcloud auth activate-service-account --key-file=/Users/ftzayn/.jenkins/terraform.json'
+            sh 'gcloud config set project $PROJECT_ID'
+            sh 'gcloud config set compute/region $REGION'
                 }
             }
         }

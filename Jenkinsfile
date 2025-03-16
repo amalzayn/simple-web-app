@@ -11,6 +11,9 @@ pipeline {
         GCLOUD_PATH = "/opt/homebrew/bin/gcloud"
         DOCKER_PATH = "/usr/local/bin/docker"
         KUBECTL_PATH = "/opt/homebrew/bin/kubectl"
+        SERVICE_ACCOUNT_KEY = "/Users/ftzayn/.jenkins/terraformkey.json"
+        // Define a directory for Docker config
+        DOCKER_CONFIG_DIR = "${WORKSPACE}/docker-config"
     }
     stages {
         stage('Checkout Code') {
@@ -21,12 +24,9 @@ pipeline {
         stage('Authenticate with GCP') {
             steps {
                 script {
-                    sh "${GCLOUD_PATH} auth activate-service-account --key-file=/Users/ftzayn/.jenkins/terraformkey.json"
+                    sh "${GCLOUD_PATH} auth activate-service-account --key-file=${SERVICE_ACCOUNT_KEY}"
                     sh "${GCLOUD_PATH} config set project $PROJECT_ID"
                     sh "${GCLOUD_PATH} config set compute/region $REGION"
-                    
-                    // Configure Docker credential helper for Artifact Registry
-                    sh "${GCLOUD_PATH} auth configure-docker ${REGION}-docker.pkg.dev --quiet"
                 }
             }
         }
@@ -40,8 +40,25 @@ pipeline {
         stage('Push Image to Artifact Registry') {
             steps {
                 script {
-                    // Use the Docker credential helper instead of manual token
-                    sh "${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}"
+                    // Create a directory for Docker config
+                    sh "mkdir -p ${DOCKER_CONFIG_DIR}"
+                    
+                    sh """
+                        # Get a fresh access token from the already activated service account
+                        ACCESS_TOKEN=\$(${GCLOUD_PATH} auth print-access-token)
+                        
+                        # Create Docker config with the token
+                        echo '{
+                          "auths": {
+                            "${REGION}-docker.pkg.dev": {
+                              "auth": "'\$(echo -n "oauth2accesstoken:\${ACCESS_TOKEN}" | base64)'"
+                            }
+                          }
+                        }' > ${DOCKER_CONFIG_DIR}/config.json
+                        
+                        # Use this config file for Docker
+                        DOCKER_CONFIG=${DOCKER_CONFIG_DIR} ${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}
+                    """
                 }
             }
         }
@@ -84,7 +101,9 @@ pipeline {
         always {
             // Clean up local Docker images to save space
             sh "${DOCKER_PATH} rmi ${AR_REPO}:${IMAGE_TAG} || true"
-            sh "${DOCKER_PATH} rmi ${AR_REPO}:latest || true"
+            
+            // Clean up Docker config directory
+            sh "rm -rf ${DOCKER_CONFIG_DIR}"
         }
     }
 }

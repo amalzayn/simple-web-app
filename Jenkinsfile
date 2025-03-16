@@ -49,7 +49,8 @@ pipeline {
             steps {
                 sh '''
                     echo "Building Docker image with Cloud Build..."
-                    gcloud builds submit --tag=${FULL_IMAGE_NAME} .
+                    gcloud builds submit --tag=${FULL_IMAGE_NAME} \
+                      --service-account=projects/symbolic-math-446906-f2/serviceAccounts/terraform-sa@symbolic-math-446906-f2.iam.gserviceaccount.com .
                 '''
             }
         }

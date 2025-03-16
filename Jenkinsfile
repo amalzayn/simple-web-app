@@ -12,8 +12,6 @@ pipeline {
         DOCKER_PATH = "/usr/local/bin/docker"
         KUBECTL_PATH = "/opt/homebrew/bin/kubectl"
         SERVICE_ACCOUNT_KEY = "/Users/ftzayn/.jenkins/terraformkey.json"
-        // Define a directory for Docker config
-        DOCKER_CONFIG_DIR = "${WORKSPACE}/docker-config"
     }
     stages {
         stage('Checkout Code') {
@@ -27,6 +25,8 @@ pipeline {
                     sh "${GCLOUD_PATH} auth activate-service-account --key-file=${SERVICE_ACCOUNT_KEY}"
                     sh "${GCLOUD_PATH} config set project $PROJECT_ID"
                     sh "${GCLOUD_PATH} config set compute/region $REGION"
+                    // Configure Docker to use gcloud credentials
+                    sh "${GCLOUD_PATH} auth configure-docker ${REGION}-docker.pkg.dev --quiet"
                 }
             }
         }
@@ -40,32 +40,14 @@ pipeline {
         stage('Push Image to Artifact Registry') {
             steps {
                 script {
-                    // Create a directory for Docker config
-                    sh "mkdir -p ${DOCKER_CONFIG_DIR}"
-                    
-                    sh """
-                        # Get a fresh access token from the already activated service account
-                        ACCESS_TOKEN=\$(${GCLOUD_PATH} auth print-access-token)
-                        
-                        # Create Docker config with the token
-                        echo '{
-                          "auths": {
-                            "${REGION}-docker.pkg.dev": {
-                              "auth": "'\$(echo -n "oauth2accesstoken:\${ACCESS_TOKEN}" | base64)'"
-                            }
-                          }
-                        }' > ${DOCKER_CONFIG_DIR}/config.json
-                        
-                        # Use this config file for Docker
-                        DOCKER_CONFIG=${DOCKER_CONFIG_DIR} ${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}
-                    """
+                    // Simply push using the configured credential helper
+                    sh "${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}"
                 }
             }
         }
         stage('Update Kubernetes Manifests') {
             steps {
                 script {
-                    // Replace the image reference in the deployment YAML
                     sh "sed -i '' 's|\\${DOCKER_REGISTRY}/demo-app:\\${IMAGE_TAG}|${AR_REPO}:${IMAGE_TAG}|g' kubernetes-deployment.yaml"
                 }
             }
@@ -75,8 +57,6 @@ pipeline {
                 script {
                     sh "${GCLOUD_PATH} container clusters get-credentials ${CLUSTER_NAME} --region ${REGION}"
                     sh "${KUBECTL_PATH} apply -f kubernetes-deployment.yaml"
-                    
-                    // Wait for deployment to complete
                     sh "${KUBECTL_PATH} rollout status deployment/demo-app --timeout=180s"
                 }
             }
@@ -84,7 +64,6 @@ pipeline {
         stage('Get Application URL') {
             steps {
                 script {
-                    // Get the service IP to report in the console
                     sh "echo 'Waiting for LoadBalancer to assign an external IP...'"
                     sh "${KUBECTL_PATH} get service demo-app -o jsonpath='{.status.loadBalancer.ingress[0].ip}'"
                 }
@@ -99,11 +78,7 @@ pipeline {
             echo "Deployment failed!"
         }
         always {
-            // Clean up local Docker images to save space
             sh "${DOCKER_PATH} rmi ${AR_REPO}:${IMAGE_TAG} || true"
-            
-            // Clean up Docker config directory
-            sh "rm -rf ${DOCKER_CONFIG_DIR}"
         }
     }
 }

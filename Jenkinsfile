@@ -35,18 +35,18 @@ pipeline {
             }
         }
         stage('Push Image to Artifact Registry') {
-            steps {  // This was missing
+            steps {
                 script {
                     sh '''
                         # Get an access token
                         ACCESS_TOKEN=$(/opt/homebrew/bin/gcloud auth print-access-token)
                         
-                        # Use it to manually authenticate Docker
-                        echo $ACCESS_TOKEN | /usr/local/bin/docker login -u oauth2accesstoken --password-stdin us-central1-docker.pkg.dev
+                        # Create a temporary Docker config file without credential helpers
+                        echo '{"auths":{"us-central1-docker.pkg.dev":{"auth":"'$(echo -n "oauth2accesstoken:$ACCESS_TOKEN" | base64)')"}}}' > /tmp/docker_config.json
                         
-                        # Push the image (using environment variables)
+                        # Use this config file for the Docker push
+                        DOCKER_CONFIG=/tmp ${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}
                     '''
-                    sh "${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}"
                 }
             }
         }

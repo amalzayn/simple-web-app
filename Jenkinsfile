@@ -30,36 +30,38 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "${DOCKER_PATH} build -t $AR_REPO:$IMAGE_TAG ."
+                    sh "${DOCKER_PATH} build -t ${AR_REPO}:${IMAGE_TAG} ."
                 }
             }
         }
         stage('Push Image to Artifact Registry') {
-            script {
-                sh '''
-                   # Get an access token
-                   ACCESS_TOKEN=$(/opt/homebrew/bin/gcloud auth print-access-token)
-      
-                   # Use it to manually authenticate Docker
-                    echo $ACCESS_TOKEN | /usr/local/bin/docker login -u oauth2accesstoken --password-stdin us-central1-docker.pkg.dev
-      
-                  # Push the image
-                  /usr/local/bin/docker push us-central1-docker.pkg.dev/symbolic-math-446906-f2/my-docker-repo/my-app:36
-                   '''
-           }
+            steps {  // This was missing
+                script {
+                    sh '''
+                        # Get an access token
+                        ACCESS_TOKEN=$(/opt/homebrew/bin/gcloud auth print-access-token)
+                        
+                        # Use it to manually authenticate Docker
+                        echo $ACCESS_TOKEN | /usr/local/bin/docker login -u oauth2accesstoken --password-stdin us-central1-docker.pkg.dev
+                        
+                        # Push the image (using environment variables)
+                    '''
+                    sh "${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}"
+                }
+            }
         }
         stage('Update Kubernetes Manifests') {
             steps {
                 script {
                     // Replace the image reference in the deployment YAML
-                    sh "sed -i '' 's|\\${DOCKER_REGISTRY}/demo-app:\\${IMAGE_TAG}|$AR_REPO:$IMAGE_TAG|g' kubernetes-deployment.yaml"
+                    sh "sed -i '' 's|\\${DOCKER_REGISTRY}/demo-app:\\${IMAGE_TAG}|${AR_REPO}:${IMAGE_TAG}|g' kubernetes-deployment.yaml"
                 }
             }
         }
         stage('Deploy to GKE') {
             steps {
                 script {
-                    sh "${GCLOUD_PATH} container clusters get-credentials $CLUSTER_NAME --region $REGION"
+                    sh "${GCLOUD_PATH} container clusters get-credentials ${CLUSTER_NAME} --region ${REGION}"
                     sh "${KUBECTL_PATH} apply -f kubernetes-deployment.yaml"
                     
                     // Wait for deployment to complete
@@ -86,8 +88,8 @@ pipeline {
         }
         always {
             // Clean up local Docker images to save space
-            sh "${DOCKER_PATH} rmi $AR_REPO:$IMAGE_TAG || true"
-            sh "${DOCKER_PATH} rmi $AR_REPO:latest || true"
+            sh "${DOCKER_PATH} rmi ${AR_REPO}:${IMAGE_TAG} || true"
+            sh "${DOCKER_PATH} rmi ${AR_REPO}:latest || true"
         }
     }
 }

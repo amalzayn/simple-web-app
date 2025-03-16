@@ -47,7 +47,6 @@ pipeline {
       /usr/local/bin/docker push us-central1-docker.pkg.dev/symbolic-math-446906-f2/my-docker-repo/my-app:36
     '''
   }
-}
         }
         stage('Update Kubernetes Manifests') {
             steps {

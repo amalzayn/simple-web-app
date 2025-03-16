@@ -9,8 +9,8 @@ pipeline {
         IMAGE_TAG = "${BUILD_NUMBER}"
         AR_REPO = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}"
         GCLOUD_PATH = "/opt/homebrew/bin/gcloud"
-        DOCKER_PATH = "/usr/local/bin/docker"  // Update this if your docker path is different
-        KUBECTL_PATH = "/opt/homebrew/bin/kubectl"  // Update this if your kubectl path is different
+        DOCKER_PATH = "/usr/local/bin/docker"
+        KUBECTL_PATH = "/opt/homebrew/bin/kubectl"
     }
     stages {
         stage('Checkout Code') {
@@ -24,6 +24,9 @@ pipeline {
                     sh "${GCLOUD_PATH} auth activate-service-account --key-file=/Users/ftzayn/.jenkins/terraformkey.json"
                     sh "${GCLOUD_PATH} config set project $PROJECT_ID"
                     sh "${GCLOUD_PATH} config set compute/region $REGION"
+                    
+                    // Configure Docker credential helper for Artifact Registry
+                    sh "${GCLOUD_PATH} auth configure-docker ${REGION}-docker.pkg.dev --quiet"
                 }
             }
         }
@@ -37,16 +40,8 @@ pipeline {
         stage('Push Image to Artifact Registry') {
             steps {
                 script {
-                    sh '''
-                        # Get an access token
-                        ACCESS_TOKEN=$(/opt/homebrew/bin/gcloud auth print-access-token)
-                        
-                        # Create a temporary Docker config file without credential helpers
-                        echo '{"auths":{"us-central1-docker.pkg.dev":{"auth":"'$(echo -n "oauth2accesstoken:$ACCESS_TOKEN" | base64)')"}}}' > /tmp/docker_config.json
-                        
-                        # Use this config file for the Docker push
-                        DOCKER_CONFIG=/tmp ${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}
-                    '''
+                    // Use the Docker credential helper instead of manual token
+                    sh "${DOCKER_PATH} push ${AR_REPO}:${IMAGE_TAG}"
                 }
             }
         }

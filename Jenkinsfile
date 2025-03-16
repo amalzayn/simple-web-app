@@ -11,7 +11,7 @@ pipeline {
         GCLOUD_PATH = "/opt/homebrew/bin/gcloud"
         DOCKER_PATH = "/usr/local/bin/docker"
         KUBECTL_PATH = "/opt/homebrew/bin/kubectl"
-        SERVICE_ACCOUNT_KEY = "/Users/ftzayn/.jenkins/terraformkey.json"
+        SERVICE_ACCOUNT_KEY = "/Users/ftzayn/Desktop/terraformkey.json"
     }
     stages {
         stage('Checkout Code') {

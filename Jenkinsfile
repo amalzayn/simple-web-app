@@ -4,7 +4,7 @@ pipeline {
         PROJECT_ID = "symbolic-math-446906-f2"
         REGION = "us-central1"
         CLUSTER_NAME = "my-cluster"
-        REPO_NAME = "my-docker-repo"
+        REPO_NAME = "docker-repo"
         IMAGE_NAME = "my-app"
         IMAGE_TAG = "${BUILD_NUMBER}"
         AR_REPO = "${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${IMAGE_NAME}"

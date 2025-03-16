@@ -35,16 +35,19 @@ pipeline {
             }
         }
         stage('Push Image to Artifact Registry') {
-            steps {
-                script {
-                    sh "${GCLOUD_PATH} auth configure-docker ${REGION}-docker.pkg.dev"
-                    sh "${DOCKER_PATH} push $AR_REPO:$IMAGE_TAG"
-                    
-                    // Also tag and push as latest for convenience
-                    sh "${DOCKER_PATH} tag $AR_REPO:$IMAGE_TAG $AR_REPO:latest"
-                    sh "${DOCKER_PATH} push $AR_REPO:latest"
-                }
-            }
+  script {
+    sh '''
+      # Get an access token
+      ACCESS_TOKEN=$(/opt/homebrew/bin/gcloud auth print-access-token)
+      
+      # Use it to manually authenticate Docker
+      echo $ACCESS_TOKEN | /usr/local/bin/docker login -u oauth2accesstoken --password-stdin us-central1-docker.pkg.dev
+      
+      # Push the image
+      /usr/local/bin/docker push us-central1-docker.pkg.dev/symbolic-math-446906-f2/my-docker-repo/my-app:36
+    '''
+  }
+}
         }
         stage('Update Kubernetes Manifests') {
             steps {

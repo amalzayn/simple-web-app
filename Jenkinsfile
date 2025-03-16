@@ -21,7 +21,7 @@ pipeline {
         stage('Authenticate with GCP') {
             steps {
                 script {
-                    sh "${GCLOUD_PATH} auth activate-service-account --key-file=/Users/ftzayn/Desktop/multi-cloud1/learn-terraform-mulitcloud-kubernetes/terraformkey.json"
+                    sh "${GCLOUD_PATH} auth activate-service-account --key-file=/Users/ftzayn/Desktop/multi-cloud1/learn-terraform-multicloud-kubernetes/terraformkey.json"
                     sh "${GCLOUD_PATH} config set project $PROJECT_ID"
                     sh "${GCLOUD_PATH} config set compute/region $REGION"
                 }

@@ -30,6 +30,9 @@ pipeline {
         stage('Setup GCloud') {
             steps {
                 sh '''
+                    # Add Homebrew bin to PATH
+                    export PATH=$PATH:/opt/homebrew/bin
+                    
                     # Ensure gcloud is installed
                     if ! command -v gcloud &> /dev/null; then
                         echo "Installing Google Cloud SDK..."
@@ -48,6 +51,9 @@ pipeline {
         stage('Build with Cloud Build') {
             steps {
                 sh '''
+                    # Add Homebrew bin to PATH
+                    export PATH=$PATH:/opt/homebrew/bin
+                    
                     echo "Building Docker image with Cloud Build..."
                     gcloud builds submit --tag=${FULL_IMAGE_NAME} \
                       --service-account=projects/symbolic-math-446906-f2/serviceAccounts/terraform-sa@symbolic-math-446906-f2.iam.gserviceaccount.com .

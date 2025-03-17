@@ -14,7 +14,7 @@ pipeline {
         FULL_IMAGE_NAME = "${GCR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}"
         
         // GCP Authentication
-        GCP_KEY_FILE = credentials('gcp-service-account-key')
+        GCP_KEY_FILE = credentials('gcp-key')
         
         // Kubernetes Manifests Path
         K8S_DIR = 'kubernetes'
@@ -33,7 +33,7 @@ pipeline {
                     # Ensure gcloud is installed
                     if ! command -v gcloud &> /dev/null; then
                         echo "Installing Google Cloud SDK..."
-                        # For macOS - adjust if using a different OS
+                        # For macOS - adjust based on your Jenkins server OS
                         curl https://sdk.cloud.google.com | bash
                         exec -l $SHELL
                     fi
@@ -122,10 +122,10 @@ EOL
                     fi
                     
                     echo "Applying Kubernetes manifests..."
-                    /usr/local/bin/kubectl apply -f ${K8S_DIR}/
+                    kubectl apply -f ${K8S_DIR}/
                     
                     echo "Waiting for deployment to complete..."
-                    /usr/local/bin/kubectl rollout status deployment/${IMAGE_NAME}
+                    kubectl rollout status deployment/${IMAGE_NAME}
                 '''
             }
         }
@@ -134,11 +134,8 @@ EOL
     post {
         success {
             sh '''
-                # Add kubectl to PATH
-                export PATH=$PATH:/usr/local/bin
-                
                 echo "Deployment successful! Your application is available at:"
-                /usr/local/bin/kubectl get service ${IMAGE_NAME}-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+                kubectl get service ${IMAGE_NAME}-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
             '''
         }
         failure {

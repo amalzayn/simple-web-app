@@ -33,7 +33,7 @@ pipeline {
                     # Ensure gcloud is installed
                     if ! command -v gcloud &> /dev/null; then
                         echo "Installing Google Cloud SDK..."
-                        # For macOS - adjust based on your Jenkins server OS
+                        # For macOS - adjust if using a different OS
                         curl https://sdk.cloud.google.com | bash
                         exec -l $SHELL
                     fi
@@ -122,10 +122,10 @@ EOL
                     fi
                     
                     echo "Applying Kubernetes manifests..."
-                    kubectl apply -f ${K8S_DIR}/
+                    /usr/local/bin/kubectl apply -f ${K8S_DIR}/
                     
                     echo "Waiting for deployment to complete..."
-                    kubectl rollout status deployment/${IMAGE_NAME}
+                    /usr/local/bin/kubectl rollout status deployment/${IMAGE_NAME}
                 '''
             }
         }
@@ -134,8 +134,11 @@ EOL
     post {
         success {
             sh '''
+                # Add kubectl to PATH
+                export PATH=$PATH:/usr/local/bin
+                
                 echo "Deployment successful! Your application is available at:"
-                kubectl get service ${IMAGE_NAME}-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+                /usr/local/bin/kubectl get service ${IMAGE_NAME}-service -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
             '''
         }
         failure {

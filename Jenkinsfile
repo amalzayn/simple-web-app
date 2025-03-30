@@ -49,17 +49,17 @@ pipeline {
         }
         
         stage('Build with Cloud Build') {
-            steps {
-                sh '''
-                    # Add Homebrew bin to PATH
-                    export PATH=$PATH:/opt/homebrew/bin
-                    
-                    echo "Building Docker image with Cloud Build..."
-                    gcloud builds submit --tag=${FULL_IMAGE_NAME} \
-                      --service-account=projects/symbolic-math-446906-f2/serviceAccounts/terraform-sa@symbolic-math-446906-f2.iam.gserviceaccount.com --logging=CLOUD_LOGGING_ONLY.
-                '''
-            }
-        }
+    steps {
+        sh '''
+            # Add Homebrew bin to PATH
+            export PATH=$PATH:/opt/homebrew/bin
+            
+            echo "Building Docker image with Cloud Build..."
+            gcloud builds submit --config=cloudbuild.yaml \
+                --service-account=projects/symbolic-math-446906-f2/serviceAccounts/terraform-sa@symbolic-math-446906-f2.iam.gserviceaccount.com
+        '''
+    }
+}
         
         stage('Deploy to GKE') {
             steps {
